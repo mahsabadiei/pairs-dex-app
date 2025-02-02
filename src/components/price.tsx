@@ -20,7 +20,6 @@ import {
 import qs from "qs";
 import ZeroExLogo from "@/../public/images/white-0x-logo.png";
 
-
 export const DEFAULT_BUY_TOKEN = (chainId: number) => {
   if (chainId === 1) {
     return "weth";
@@ -34,8 +33,10 @@ export default function PriceView({
   setFinalize,
   chainId,
 }: {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   price: any;
   taker: Address | undefined;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   setPrice: (price: any) => void;
   setFinalize: (finalize: boolean) => void;
   chainId: number;
@@ -45,7 +46,7 @@ export default function PriceView({
   const [sellAmount, setSellAmount] = useState("");
   const [buyAmount, setBuyAmount] = useState("");
   const [tradeDirection, setTradeDirection] = useState("sell");
-  const [error, setError] = useState([]);
+  // const [error, setError] = useState([]);
   const [buyTokenTax, setBuyTokenTax] = useState({
     buyTaxBps: "0",
     sellTaxBps: "0",
@@ -75,7 +76,7 @@ export default function PriceView({
 
   const sellTokenDecimals = sellTokenObject.decimals;
   const buyTokenDecimals = buyTokenObject.decimals;
-  const sellTokenAddress = sellTokenObject.address;
+  // const sellTokenAddress = sellTokenObject.address;
 
   const parsedSellAmount =
     sellAmount && tradeDirection === "sell"
@@ -108,9 +109,9 @@ export default function PriceView({
 
       if (data?.validationErrors?.length > 0) {
         // error for sellAmount too low
-        setError(data.validationErrors);
+        // setError(data.validationErrors);
       } else {
-        setError([]);
+        // setError([]);
       }
       if (data.buyAmount) {
         setBuyAmount(formatUnits(data.buyAmount, buyTokenDecimals));
@@ -139,7 +140,10 @@ export default function PriceView({
   ]);
 
   // Hook for fetching balance information for specified token for a specific taker address
-  const { data, isError, isLoading } = useBalance({
+  const {
+    data,
+    // , isError, isLoading
+  } = useBalance({
     address: taker,
     token: sellTokenObject.address,
   });
@@ -429,25 +433,9 @@ export default function PriceView({
     onClick: () => void;
     sellTokenAddress: Address;
     disabled?: boolean;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     price: any;
   }) {
-    // If price.issues.allowance is null, show the Review Trade button
-    if (price?.issues.allowance === null) {
-      return (
-        <button
-          type="button"
-          disabled={disabled}
-          onClick={() => {
-            // fetch data, when finished, show quote view
-            onClick();
-          }}
-          className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-700 disabled:opacity-25"
-        >
-          {disabled ? "Insufficient Balance" : "Review Trade"}
-        </button>
-      );
-    }
-
     // Determine the spender from price.issues.allowance
     const spender = price?.issues.allowance.spender;
 
@@ -476,10 +464,12 @@ export default function PriceView({
     } = useWriteContract();
 
     // useWaitForTransactionReceipt to wait for the approval transaction to complete
-    const { data: approvalReceiptData, isLoading: isApproving } =
-      useWaitForTransactionReceipt({
-        hash: writeContractResult,
-      });
+    const {
+      // data: approvalReceiptData,
+      isLoading: isApproving,
+    } = useWaitForTransactionReceipt({
+      hash: writeContractResult,
+    });
 
     // Call `refetch` when the transaction succeeds
     useEffect(() => {
@@ -487,6 +477,23 @@ export default function PriceView({
         refetch();
       }
     }, [data, refetch]);
+
+    // If price.issues.allowance is null, show the Review Trade button
+    if (price?.issues.allowance === null) {
+      return (
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => {
+            // fetch data, when finished, show quote view
+            onClick();
+          }}
+          className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-700 disabled:opacity-25"
+        >
+          {disabled ? "Insufficient Balance" : "Review Trade"}
+        </button>
+      );
+    }
 
     if (error) {
       return <div>Something went wrong: {error.message}</div>;

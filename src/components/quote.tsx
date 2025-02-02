@@ -27,6 +27,7 @@ export default function QuoteView({
   taker: Address | undefined;
   price: PriceResponse;
   quote: QuoteResponse | undefined;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   setQuote: (price: any) => void;
   chainId: number;
 }) {
@@ -200,7 +201,6 @@ export default function QuoteView({
             }
 
             // (2) Append signature length and signature data to calldata
-
             if (signature && quote?.transaction?.data) {
               const signatureLengthInHex = numberToHex(size(signature), {
                 signed: false,
@@ -222,8 +222,7 @@ export default function QuoteView({
           }
 
           // (3) Submit the transaction with Permit2 signature
-
-          sendTransaction &&
+          if (sendTransaction) {
             sendTransaction({
               account: walletClient?.account.address,
               gas: !!quote?.transaction.gas
@@ -236,6 +235,7 @@ export default function QuoteView({
                 : undefined, // value is used for native tokens
               chainId: chainId,
             });
+          }
         }}
       >
         {isPending ? "Confirming..." : "Place Order"}
