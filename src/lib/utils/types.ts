@@ -57,7 +57,7 @@ export interface QuoteResponse {
     };
     gasFee: null;
   } | null;
-  auxiliaryChainData: {};
+  auxiliaryChainData: object;
   to: Address;
   data: Hex;
   value: string;
