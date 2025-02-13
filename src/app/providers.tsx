@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import * as React from "react";
+import * as React from 'react';
 import {
   RainbowKitProvider,
   connectorsForWallets,
-} from "@rainbow-me/rainbowkit";
+} from '@rainbow-me/rainbowkit';
 import {
   coinbaseWallet,
   metaMaskWallet,
@@ -12,25 +12,24 @@ import {
   trustWallet,
   ledgerWallet,
   rainbowWallet,
-} from "@rainbow-me/rainbowkit/wallets";
-import { mainnet } from "wagmi/chains";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { WagmiProvider, createConfig, http } from "wagmi";
+} from '@rainbow-me/rainbowkit/wallets';
+import { arbitrum, mainnet, optimism, polygon } from 'wagmi/chains';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { WagmiProvider, createConfig, http } from 'wagmi';
 
 const projectId = process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID as string;
-coinbaseWallet.preference = "smartWalletOnly";
 
 const connectors = connectorsForWallets(
   [
     {
-      groupName: "Recommended Wallet",
-      wallets: [coinbaseWallet],
+      groupName: 'Recommended Wallet',
+      wallets: [rainbowWallet],
     },
     {
-      groupName: "Other",
+      groupName: 'Other',
       wallets: [
-        rainbowWallet,
         metaMaskWallet,
+        coinbaseWallet,
         argentWallet,
         trustWallet,
         ledgerWallet,
@@ -38,32 +37,32 @@ const connectors = connectorsForWallets(
     },
   ],
   {
-    appName: "0x Swap Demo App",
+    appName: 'Pairs Dex App',
     projectId,
   }
 );
 
-const config = createConfig({
-  chains: [mainnet],
-  // turn off injected provider discovery
+export const config = createConfig({
+  chains: [mainnet, polygon, arbitrum, optimism],
   multiInjectedProviderDiscovery: false,
   connectors,
   ssr: true,
-  transports: { [mainnet.id]: http() },
+  transports: {
+    [mainnet.id]: http(),
+    [polygon.id]: http(),
+    [arbitrum.id]: http(),
+    [optimism.id]: http(),
+  },
 });
 
 const queryClient = new QueryClient();
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <div
-      style={{
-        padding: "20px",
-      }}
-    >
+    <div>
       <WagmiProvider config={config}>
         <QueryClientProvider client={queryClient}>
-          <RainbowKitProvider>{children}</RainbowKitProvider>{" "}
+          <RainbowKitProvider>{children}</RainbowKitProvider>{' '}
         </QueryClientProvider>
       </WagmiProvider>
     </div>
