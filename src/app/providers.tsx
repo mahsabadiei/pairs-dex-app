@@ -1,10 +1,11 @@
-'use client';
+"use client";
 
-import * as React from 'react';
+import * as React from "react";
 import {
   RainbowKitProvider,
   connectorsForWallets,
-} from '@rainbow-me/rainbowkit';
+  lightTheme,
+} from "@rainbow-me/rainbowkit";
 import {
   coinbaseWallet,
   metaMaskWallet,
@@ -12,21 +13,21 @@ import {
   trustWallet,
   ledgerWallet,
   rainbowWallet,
-} from '@rainbow-me/rainbowkit/wallets';
-import { arbitrum, mainnet, optimism, polygon } from 'wagmi/chains';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { WagmiProvider, createConfig, http } from 'wagmi';
+} from "@rainbow-me/rainbowkit/wallets";
+import { arbitrum, mainnet, optimism, polygon } from "wagmi/chains";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { WagmiProvider, createConfig, http } from "wagmi";
 
 const projectId = process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID as string;
 
 const connectors = connectorsForWallets(
   [
     {
-      groupName: 'Recommended Wallet',
+      groupName: "Recommended Wallet",
       wallets: [rainbowWallet],
     },
     {
-      groupName: 'Other',
+      groupName: "Other",
       wallets: [
         metaMaskWallet,
         coinbaseWallet,
@@ -37,7 +38,7 @@ const connectors = connectorsForWallets(
     },
   ],
   {
-    appName: 'Pairs Dex App',
+    appName: "Pairs Dex App",
     projectId,
   }
 );
@@ -62,7 +63,15 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <div>
       <WagmiProvider config={config}>
         <QueryClientProvider client={queryClient}>
-          <RainbowKitProvider>{children}</RainbowKitProvider>{' '}
+          <RainbowKitProvider
+            theme={lightTheme({
+              accentColor: "#1A1A1A",
+              accentColorForeground: "white",
+              borderRadius: "medium",
+            })}
+          >
+            {children}
+          </RainbowKitProvider>{" "}
         </QueryClientProvider>
       </WagmiProvider>
     </div>
