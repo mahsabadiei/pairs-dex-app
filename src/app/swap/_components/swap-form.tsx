@@ -6,7 +6,11 @@ import { parseUnits } from "ethers";
 import toast from "react-hot-toast";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { Route } from "@lifi/sdk";
-import { executeSwap, getQuote, getSupportedTokens } from "../_lib/utils/swap";
+import {
+  executeSwap,
+  getQuote,
+  getSupportedTokens,
+} from "@/lib/utils/swap";
 import ChainSelector from "./chain-selector";
 import TokenSelector from "./token-selector";
 import type { Token } from "@lifi/types";
@@ -91,7 +95,7 @@ const SwapForm = () => {
   };
 
   return (
-    <div className="w-[600px] max-w-md p-6 rounded-2xl border-2 border-white bg-neutralCream">
+    <div className="w-[600px] max-w-md p-6 rounded-2xl border-2 border-white bg-neutral-cream">
       <div className="flex justify-between items-center mb-6">
         {/* <h1 className="text-2xl font-bold">Multi-Chain Swap</h1> */}
         <ConnectButton />
@@ -143,7 +147,7 @@ const SwapForm = () => {
           <button
             onClick={handleGetQuote}
             disabled={loading || !address}
-            className="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-black-primary text-white py-2 px-4 rounded hover:bg-neutral-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {!address
               ? "Connect Wallet"
@@ -215,7 +219,7 @@ const SwapForm = () => {
 
               <button
                 onClick={handleSwap}
-                className="w-full mt-4 bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition-colors"
+                className="w-full mt-4 bg-black-primary text-white py-2 px-4 rounded hover:bg-neutral-dark transition-colors"
               >
                 Confirm Swap
               </button>

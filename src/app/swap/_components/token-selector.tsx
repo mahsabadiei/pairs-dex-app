@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { getSupportedTokens } from "../_lib/utils/swap";
+import { getSupportedTokens } from "@/lib/utils/swap";
 import type { Token } from "@lifi/types";
 import { debounce } from "lodash";
 import { ChevronDown, Search, X } from "lucide-react";
@@ -146,7 +146,7 @@ const TokenSelector = ({
       </button>
 
       {isOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-80 z-50 flex items-center justify-center p-4">
           <div
             ref={modalRef}
             className="bg-white rounded-xl w-full max-w-md max-h-[80vh] flex flex-col"
