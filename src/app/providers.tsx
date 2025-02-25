@@ -17,6 +17,8 @@ import {
 import { arbitrum, mainnet, optimism, polygon } from "wagmi/chains";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { WagmiProvider, createConfig, http } from "wagmi";
+// LI.FI doesn't have a dedicated provider component in their SDK
+// We'll use their SDK directly in our components
 
 const projectId = process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID as string;
 

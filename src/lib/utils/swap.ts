@@ -6,10 +6,13 @@ import {
   getChains,
   getTokenBalance,
   setTokenAllowance,
+  StatusManager,
+  getToken,
+  getTokenBalances,
 } from "@lifi/sdk";
-// import { ethers } from 'ethers';
-import type { BaseToken, Token } from "@lifi/types";
+import type { BaseToken, Token, UnavailableRoutes } from "@lifi/types";
 import { Client } from "viem";
+import { SDKError, SwapStatus } from "../types/lifi";
 
 export interface QuoteParams {
   fromChain: number;
@@ -18,41 +21,83 @@ export interface QuoteParams {
   toToken: string;
   fromAmount: string;
   fromAddress: string;
+  slippage?: number;
+  allowSwitchChain?: boolean;
 }
 
+// Get all supported chains
 export const fetchChains = async () => {
   try {
     const chains = await getChains();
-    console.log(chains);
+    return chains;
   } catch (error) {
     console.error("Error fetching chains:", error);
+    throw error;
   }
 };
 
+// Get tokens for a specific chain
 export const getSupportedTokens = async (chainId: number): Promise<Token[]> => {
-  const tokensResponse = await getTokens();
-  const tokensArray = tokensResponse.tokens[chainId];
+  try {
+    const tokensResponse = await getTokens();
+    const tokensArray = tokensResponse.tokens[chainId];
 
-  if (!tokensArray) {
-    throw new Error(`No tokens found for chainId ${chainId}`);
+    if (!tokensArray) {
+      throw new Error(`No tokens found for chainId ${chainId}`);
+    }
+
+    return tokensArray;
+  } catch (error) {
+    console.error(`Error fetching tokens for chain ${chainId}:`, error);
+    throw error;
   }
-
-  return tokensArray;
 };
 
-export const fetchTokenBalance = async (
-  chainId: string,
-  tokenAddress: Token
-) => {
+// Get token details
+export const fetchToken = async (
+  chainId: number,
+  tokenAddress: string
+): Promise<Token> => {
   try {
-    const balance = await getTokenBalance(chainId, tokenAddress);
-    console.log(balance);
+    const token = await getToken(chainId, tokenAddress);
+    return token;
+  } catch (error) {
+    console.error("Error fetching token:", error);
+    throw error;
+  }
+};
+
+// Get token balance using the correct parameter order
+export const fetchTokenBalance = async (
+  walletAddress: string,
+  token: Token
+): Promise<string> => {
+  try {
+    const balance = await getTokenBalance(walletAddress, token);
+    return balance;
   } catch (error) {
     console.error("Error fetching token balance:", error);
+    throw error;
   }
 };
 
-export const setAllowance = async ({
+// Fetch multiple token balances
+export const fetchMultipleTokenBalances = async (
+  walletAddress: string,
+  tokens: Token[]
+): Promise<Record<string, string>> => {
+  try {
+    // For multiple tokens, use getTokenBalances
+    const balances = await getTokenBalances(walletAddress, tokens);
+    return balances;
+  } catch (error) {
+    console.error("Error fetching token balances:", error);
+    throw error;
+  }
+};
+
+// Check and set token allowance
+export const checkAndSetAllowance = async ({
   walletClient,
   token,
   spenderAddress,
@@ -62,45 +107,103 @@ export const setAllowance = async ({
   token: BaseToken;
   spenderAddress: string;
   amount: bigint;
-}) => {
+}): Promise<boolean> => {
   try {
-    await setTokenAllowance({ walletClient, token, spenderAddress, amount });
-    console.log("Allowance set successfully");
+    // Only ERC20 tokens need allowance
+    if (token.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE") {
+      return true; // Native token doesn't need approval
+    }
+
+    // For our purposes, we'll use the simpler approach with setTokenAllowance
+    // Since direct contract interaction might not be available in the Client type
+
+    // Just set the allowance directly using LI.FI's SDK function
+    await setTokenAllowance({
+      walletClient,
+      token,
+      spenderAddress,
+      amount,
+    });
+
+    return true;
   } catch (error) {
     console.error("Error setting allowance:", error);
+    throw error;
   }
 };
 
+// Get quote for a swap
 export const getQuote = async (params: QuoteParams): Promise<Route> => {
-  const routes = await getRoutes({
-    fromChainId: params.fromChain,
-    fromTokenAddress: params.fromToken,
-    fromAmount: params.fromAmount,
-    toChainId: params.toChain,
-    toTokenAddress: params.toToken,
-    fromAddress: params.fromAddress,
-  });
+  try {
+    const routes = await getRoutes({
+      fromChainId: params.fromChain,
+      fromTokenAddress: params.fromToken,
+      fromAmount: params.fromAmount,
+      toChainId: params.toChain,
+      toTokenAddress: params.toToken,
+      fromAddress: params.fromAddress,
+      options: {
+        slippage: params.slippage || 0.005, // Default 0.5% slippage
+        allowSwitchChain: params.allowSwitchChain ?? true,
+        integrator: "pairs-dex", // Valid format (no spaces, only allowed characters)
+        // Add additional configuration as needed
+      },
+    });
 
-  if (!routes.routes.length) {
-    if (routes.unavailableRoutes) {
-      if (routes.unavailableRoutes.filteredOut?.length > 0) {
-        const reason = routes.unavailableRoutes.filteredOut[0].reason;
-        throw new Error(`Route filtered out: ${reason}`);
-      }
-      if (routes.unavailableRoutes.failed?.length > 0) {
-        const failedRoute = routes.unavailableRoutes.failed[0];
-        const subpathErrors = Object.values(failedRoute.subpaths)[0];
-        if (subpathErrors?.length > 0) {
+    if (!routes.routes.length) {
+      handleNoRoutesError(routes.unavailableRoutes);
+    }
+
+    return routes.routes[0]; // Return best route
+  } catch (error) {
+    console.error("Error getting quote:", error);
+    throw handleQuoteError(error);
+  }
+};
+
+/**
+ * Handles errors when no routes are found
+ * Extracts meaningful error messages from the unavailableRoutes object
+ */
+const handleNoRoutesError = (
+  unavailableRoutes: UnavailableRoutes | undefined
+): never => {
+  if (unavailableRoutes) {
+    // Handle filtered out routes
+    if (
+      unavailableRoutes.filteredOut &&
+      unavailableRoutes.filteredOut.length > 0
+    ) {
+      const reason = unavailableRoutes.filteredOut[0].reason;
+      throw new Error(`Route filtered out: ${reason}`);
+    }
+
+    // Handle failed routes
+    if (unavailableRoutes.failed && unavailableRoutes.failed.length > 0) {
+      const failedRoute = unavailableRoutes.failed[0];
+
+      // Get the first subpath key
+      const subpathKeys = Object.keys(failedRoute.subpaths);
+
+      if (subpathKeys.length > 0) {
+        const firstKey = subpathKeys[0];
+        const subpathErrors = failedRoute.subpaths[firstKey];
+
+        if (subpathErrors && subpathErrors.length > 0) {
+          // Look for specific error types
           const relevantError = subpathErrors.find(
             (error) =>
               error.code === "AMOUNT_TOO_HIGH" ||
               error.code === "NO_POSSIBLE_ROUTE" ||
-              error.message.includes("Insufficient liquidity")
+              (error.message &&
+                error.message.includes("Insufficient liquidity"))
           );
+
           if (relevantError) {
             if (relevantError.code === "AMOUNT_TOO_HIGH") {
               throw new Error("Amount is too high for this swap");
             } else if (
+              relevantError.message &&
               relevantError.message.includes("Insufficient liquidity")
             ) {
               throw new Error("Insufficient liquidity for this swap");
@@ -111,27 +214,116 @@ export const getQuote = async (params: QuoteParams): Promise<Route> => {
         }
       }
     }
-    throw new Error("No available routes found for this swap");
   }
 
-  return routes.routes[0]; // Return the best route
+  // Default error message
+  throw new Error("No available routes found for this swap");
 };
 
-export const executeSwap = async (route: Route) => {
-  if (!window.ethereum) {
-    throw new Error("Ethereum provider not found");
+// Handle general quote errors
+/**
+ * Handle errors from getting quotes
+ * Formats error messages to be more user-friendly
+ */
+const handleQuoteError = (error: unknown): Error => {
+  // If it's already an Error, use it directly
+  if (error instanceof Error) {
+    const errorMessage = error.message;
+
+    // Check for specific error messages and provide better user feedback
+    if (errorMessage.includes("Insufficient")) {
+      return new Error("Insufficient balance or liquidity for this swap");
+    }
+    if (errorMessage.includes("slippage")) {
+      return new Error(
+        "Slippage is too high for this swap. Try again or adjust slippage tolerance."
+      );
+    }
+
+    // Check for SDK-specific errors
+    if ("code" in error && typeof error.code === "string") {
+      const sdkError = error as SDKError;
+
+      // Handle specific SDK error codes
+      if (sdkError.code === "VALIDATION_ERROR") {
+        return new Error("Invalid swap parameters. Please check your inputs.");
+      }
+
+      if (sdkError.code === "REQUEST_FAILED" && sdkError.status === 429) {
+        return new Error("Too many requests. Please try again in a moment.");
+      }
+    }
+
+    return error;
   }
 
-  // Create Web3Provider from window.ethereum (using ethers v6)
-  // const provider = new ethers.BrowserProvider(window.ethereum);
-  // const signer = await provider.getSigner();
+  // If it's an object with a message property
+  if (typeof error === "object" && error !== null && "message" in error) {
+    return new Error(String(error.message));
+  }
 
+  // Default fallback
+  return new Error("Unknown error occurred during swap");
+};
+
+/**
+ * Execute a swap with status tracking
+ *
+ * @param route The route to execute
+ * @param walletClient The wallet client to use for signing
+ * @param onStatusUpdate Optional callback for status updates
+ * @returns The result of the swap execution
+ */
+export const executeSwap = async (
+  route: Route,
+  walletClient: Client,
+  onStatusUpdate?: (status: SwapStatus) => void
+) => {
   try {
-    const result = await executeRoute(route);
-    console.log("Swap executed successfully:", result);
+    // Create a status manager to track the swap status
+    const statusManager = new StatusManager();
+
+    // Register for status updates if callback provided
+    if (onStatusUpdate) {
+      statusManager.subscribe((status: SwapStatus) => {
+        onStatusUpdate(status);
+      });
+    }
+
+    // Execute the swap
+    const result = await executeRoute({
+      route,
+      walletClient,
+      statusManager,
+    });
+
     return result;
   } catch (error) {
     console.error("Error executing swap:", error);
     throw error;
   }
+};
+
+// Format amount with proper decimals
+export const formatTokenAmount = (amount: string, decimals: number): string => {
+  const parsedAmount = parseFloat(amount) / 10 ** decimals;
+  return parsedAmount.toLocaleString(undefined, {
+    maximumFractionDigits: 6,
+    minimumFractionDigits: 0,
+  });
+};
+
+// Convert display amount to on-chain amount
+export const parseTokenAmount = (
+  displayAmount: string,
+  decimals: number
+): string => {
+  // Remove commas and other formatting
+  const cleanAmount = displayAmount.replace(/,/g, "");
+
+  // Calculate the on-chain amount
+  const factor = 10 ** decimals;
+  const onChainAmount = Math.floor(parseFloat(cleanAmount) * factor).toString();
+
+  return onChainAmount;
 };
