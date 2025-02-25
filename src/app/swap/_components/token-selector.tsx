@@ -3,9 +3,9 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { debounce } from "lodash";
 import { ChevronDown, Search, X, Clock } from "lucide-react";
-import { getSupportedTokens, fetchTokenBalance } from "@/lib/utils/swap";
+import { getSupportedTokens } from "@/lib/utils/swap";
 import type { Token } from "@lifi/types";
-import { useAccount } from "wagmi";
+import TokenRow from "@/app/swap/_components/token-row";
 
 // Native token address
 const NATIVE_TOKEN_ADDRESS = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE";
@@ -48,8 +48,8 @@ const TokenSelector = ({
   selectedToken,
   onChange,
 }: TokenSelectorProps) => {
-  const { address } = useAccount();
   const [isOpen, setIsOpen] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
   const [tokens, setTokens] = useState<Token[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(false);
@@ -170,6 +170,21 @@ const TokenSelector = ({
     []
   );
 
+  // Handle opening and closing of modal with animations
+  const openModal = () => {
+    setIsOpen(true);
+    setIsClosing(false);
+  };
+
+  const closeModal = () => {
+    setIsClosing(true);
+    setTimeout(() => {
+      setIsOpen(false);
+      setIsClosing(false);
+      setSearchQuery("");
+    }, 280); // Slightly less than animation duration
+  };
+
   // Handle click outside to close modal
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -177,11 +192,11 @@ const TokenSelector = ({
         modalRef.current &&
         !modalRef.current.contains(event.target as Node)
       ) {
-        setIsOpen(false);
+        closeModal();
       }
     };
 
-    if (isOpen) {
+    if (isOpen && !isClosing) {
       document.addEventListener("mousedown", handleClickOutside);
     }
 
@@ -189,20 +204,19 @@ const TokenSelector = ({
       document.removeEventListener("mousedown", handleClickOutside);
       debouncedSearch.cancel();
     };
-  }, [isOpen, debouncedSearch]);
+  }, [isOpen, isClosing, debouncedSearch]);
 
   // Focus search input when modal opens
   useEffect(() => {
-    if (isOpen && searchInputRef.current) {
+    if (isOpen && searchInputRef.current && !isClosing) {
       searchInputRef.current.focus();
     }
-  }, [isOpen]);
+  }, [isOpen, isClosing]);
 
   // Handle token selection
   const handleTokenSelect = (token: Token) => {
     onChange(token.address);
-    setIsOpen(false);
-    setSearchQuery("");
+    closeModal();
 
     // Save to recent tokens
     const recentAddresses = recentTokens.map((t) => t.address);
@@ -215,64 +229,69 @@ const TokenSelector = ({
     }
   };
 
-  // Get token balance (for display)
-  const getTokenBalance = async (token: Token) => {
-    if (!address) return null;
+  // // Get token balance (for display)
+  // const getTokenBalance = async (token: Token) => {
+  //   if (!address) return null;
 
-    try {
-      // The correct parameter order is (walletAddress, token)
-      const balance = await fetchTokenBalance(address, token);
+  //   try {
+  //     // The correct parameter order is (walletAddress, token)
+  //     const balance = await fetchTokenBalance(address, token);
 
-      const displayBalance = parseFloat(balance) / 10 ** token.decimals;
-      return displayBalance.toLocaleString(undefined, {
-        maximumFractionDigits: 4,
-        minimumFractionDigits: 0,
-      });
-    } catch (err) {
-      console.error(`Error fetching balance for ${token.symbol}:`, err);
-      return null;
-    }
-  };
+  //     const displayBalance = parseFloat(balance) / 10 ** token.decimals;
+  //     return displayBalance.toLocaleString(undefined, {
+  //       maximumFractionDigits: 4,
+  //       minimumFractionDigits: 0,
+  //     });
+  //   } catch (err) {
+  //     console.error(`Error fetching balance for ${token.symbol}:`, err);
+  //     return null;
+  //   }
+  // };
 
   return (
     <div className="relative">
       <button
-        onClick={() => setIsOpen(true)}
-        className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors min-w-[120px]"
+        onClick={openModal}
+        className="flex items-center gap-2 p-2 bg-neutral-cream rounded-lg hover:bg-white-ivory transition-colors min-w-[120px]"
       >
         {selectedTokenInfo?.logoURI ? (
           <img
             src={selectedTokenInfo.logoURI}
             alt={selectedTokenInfo.symbol}
             className="w-5 h-5 rounded-full object-contain"
-            onError={(e) => {
-              const imgElement = e.target as HTMLImageElement;
-              imgElement.src = `/images/tokens/generic.svg`;
-            }}
           />
         ) : (
-          <div className="w-5 h-5 rounded-full bg-gray-200" />
+          <div className="w-5 h-5 rounded-full bg-gray-primary" />
         )}
-        <span className="font-medium text-sm">
+        <span className="font-medium text-sm text-black-primary">
           {selectedTokenInfo?.symbol || "Select Token"}
         </span>
-        <ChevronDown className="w-4 h-4 text-gray-500" />
+        <ChevronDown className="w-4 h-4 text-neutral-light" />
       </button>
 
       {isOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div
+          className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black-primary/80 backdrop-blur-sm ${
+            isClosing ? "animate-fade-in" : "animate-fade-in"
+          }`}
+          style={{ animationDirection: isClosing ? "reverse" : "normal" }}
+        >
           <div
             ref={modalRef}
-            className="bg-white rounded-xl w-full max-w-md max-h-[80vh] flex flex-col"
+            className={`bg-white-primary rounded-xl w-full max-w-md max-h-[80vh] flex flex-col ${
+              isClosing ? "animate-scale-down" : "animate-scale-up"
+            }`}
           >
-            <div className="p-4 border-b">
+            <div className="p-4 border-b border-neutral-line">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold">Select Token</h3>
+                <h3 className="text-lg font-semibold text-black-primary">
+                  Select Token
+                </h3>
                 <button
-                  onClick={() => setIsOpen(false)}
-                  className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+                  onClick={closeModal}
+                  className="p-1 hover:bg-neutral-cream rounded-full transition-colors"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-5 h-5 text-neutral-dark" />
                 </button>
               </div>
               <div className="relative">
@@ -280,33 +299,33 @@ const TokenSelector = ({
                   ref={searchInputRef}
                   type="text"
                   placeholder="Search by name or paste address"
-                  className="w-full p-3 pr-10 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full p-3 pr-10 border border-neutral-line rounded-lg focus:ring-2 focus:ring-green-primary focus:border-transparent text-black-primary"
                   onChange={(e) => debouncedSearch(e.target.value)}
                 />
-                <Search className="w-5 h-5 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2" />
+                <Search className="w-5 h-5 text-neutral-light absolute right-3 top-1/2 -translate-y-1/2" />
               </div>
             </div>
 
             <div className="flex-1 overflow-y-auto">
               {loading ? (
                 <div className="p-6 text-center">
-                  <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-                  <p className="mt-2 text-sm text-gray-600">
+                  <div className="w-6 h-6 border-2 border-green-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
+                  <p className="mt-2 text-sm text-neutral-light">
                     Loading tokens...
                   </p>
                 </div>
               ) : error ? (
-                <div className="p-6 text-center text-red-500">
+                <div className="p-6 text-center text-red-primary">
                   <p>{error}</p>
                   <button
                     onClick={() => window.location.reload()}
-                    className="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+                    className="mt-2 px-4 py-2 bg-green-primary text-black-primary rounded hover:bg-green-primary/90 transition-colors"
                   >
                     Retry
                   </button>
                 </div>
               ) : filteredTokens.length === 0 ? (
-                <div className="p-6 text-center text-gray-500">
+                <div className="p-6 text-center text-neutral-light">
                   No tokens found
                 </div>
               ) : (
@@ -314,7 +333,7 @@ const TokenSelector = ({
                   {/* Recent tokens section */}
                   {!searchQuery && recentTokens.length > 0 && (
                     <div>
-                      <div className="px-3 py-2 text-xs font-medium text-gray-500 flex items-center">
+                      <div className="px-3 py-2 text-xs font-medium text-neutral-light flex items-center">
                         <Clock className="w-3 h-3 mr-1" /> RECENT
                       </div>
                       <div className="mb-2">
@@ -323,7 +342,6 @@ const TokenSelector = ({
                             key={`recent-${token.address}`}
                             token={token}
                             onSelect={handleTokenSelect}
-                            getBalance={getTokenBalance}
                             isSelected={
                               selectedToken.toLowerCase() ===
                               token.address.toLowerCase()
@@ -331,14 +349,14 @@ const TokenSelector = ({
                           />
                         ))}
                       </div>
-                      <div className="border-t my-2"></div>
+                      <div className="border-t border-neutral-line my-2"></div>
                     </div>
                   )}
 
                   {/* All tokens section */}
                   <div>
                     {!searchQuery && (
-                      <div className="px-3 py-2 text-xs font-medium text-gray-500">
+                      <div className="px-3 py-2 text-xs font-medium text-neutral-light">
                         ALL TOKENS
                       </div>
                     )}
@@ -348,7 +366,6 @@ const TokenSelector = ({
                           key={`token-${token.address}`}
                           token={token}
                           onSelect={handleTokenSelect}
-                          getBalance={getTokenBalance}
                           isSelected={
                             selectedToken.toLowerCase() ===
                             token.address.toLowerCase()
@@ -364,74 +381,6 @@ const TokenSelector = ({
         </div>
       )}
     </div>
-  );
-};
-
-// Token row component (for cleaner code)
-interface TokenRowProps {
-  token: Token;
-  onSelect: (token: Token) => void;
-  getBalance: (token: Token) => Promise<string | null>;
-  isSelected: boolean;
-}
-
-const TokenRow: React.FC<TokenRowProps> = ({
-  token,
-  onSelect,
-  getBalance,
-  isSelected,
-}) => {
-  const { address } = useAccount();
-  const [balance, setBalance] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  // Load balance when component mounts
-  useEffect(() => {
-    if (address) {
-      setLoading(true);
-      getBalance(token)
-        .then((bal) => setBalance(bal))
-        .finally(() => setLoading(false));
-    }
-  }, [address, token, getBalance]);
-
-  return (
-    <button
-      onClick={() => onSelect(token)}
-      className={`w-full p-3 hover:bg-gray-50 rounded-lg flex items-center justify-between transition-colors ${
-        isSelected ? "bg-gray-100" : ""
-      }`}
-    >
-      <div className="flex items-center gap-3">
-        {token.logoURI ? (
-          <img
-            src={token.logoURI}
-            alt={token.symbol}
-            className="w-8 h-8 rounded-full object-contain"
-            onError={(e) => {
-              const imgElement = e.target as HTMLImageElement;
-              imgElement.src = `/images/tokens/generic.svg`;
-            }}
-          />
-        ) : (
-          <div className="w-8 h-8 rounded-full bg-gray-200" />
-        )}
-        <div className="flex flex-col items-start">
-          <span className="font-medium">{token.symbol}</span>
-          <span className="text-xs text-gray-500">{token.name}</span>
-        </div>
-      </div>
-
-      {address && (
-        <div className="text-right">
-          {loading ? (
-            <div className="w-4 h-4 border border-gray-300 border-t-transparent rounded-full animate-spin ml-auto"></div>
-          ) : (
-            balance && <span className="text-sm">{balance}</span>
-          )}
-        </div>
-      )}
-    </button>
   );
 };
 

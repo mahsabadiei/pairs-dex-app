@@ -1,19 +1,19 @@
-import React from 'react';
-import { XCircleIcon, CheckCircleIcon, Clock } from 'lucide-react';
+import React from "react";
+import { XCircleIcon, CheckCircleIcon, Clock } from "lucide-react";
 
 export enum TransactionStep {
-  APPROVAL = 'approval',
-  BRIDGE = 'bridge',
-  SWAP = 'swap',
-  RECEIVING = 'receiving',
-  COMPLETE = 'complete',
+  APPROVAL = "approval",
+  BRIDGE = "bridge",
+  SWAP = "swap",
+  RECEIVING = "receiving",
+  COMPLETE = "complete",
 }
 
 export enum StepStatus {
-  PENDING = 'pending',
-  ACTIVE = 'active',
-  COMPLETED = 'completed',
-  FAILED = 'failed',
+  PENDING = "pending",
+  ACTIVE = "active",
+  COMPLETED = "completed",
+  FAILED = "failed",
 }
 
 interface Step {
@@ -27,23 +27,19 @@ interface Step {
 
 interface TransactionStatusProps {
   steps: Step[];
-  currentStep: TransactionStep;
 }
 
-const TransactionStatus: React.FC<TransactionStatusProps> = ({
-  steps,
-  currentStep,
-}) => {
+const TransactionStatus: React.FC<TransactionStatusProps> = ({ steps }) => {
   // Get explorer URL based on chain ID
   const getExplorerUrl = (chainId: number, txHash: string) => {
     const explorers: Record<number, string> = {
-      1: 'https://etherscan.io',
-      137: 'https://polygonscan.com',
-      42161: 'https://arbiscan.io',
-      10: 'https://optimistic.etherscan.io',
+      1: "https://etherscan.io",
+      137: "https://polygonscan.com",
+      42161: "https://arbiscan.io",
+      10: "https://optimistic.etherscan.io",
     };
 
-    const baseUrl = explorers[chainId] || 'https://etherscan.io';
+    const baseUrl = explorers[chainId] || "https://etherscan.io";
     return `${baseUrl}/tx/${txHash}`;
   };
 
@@ -75,12 +71,12 @@ const TransactionStatus: React.FC<TransactionStatusProps> = ({
               <div
                 className={`absolute left-2.5 top-6 w-0.5 h-full -ml-px ${
                   step.status === StepStatus.COMPLETED
-                    ? 'bg-green-500'
-                    : 'bg-gray-200'
+                    ? "bg-green-500"
+                    : "bg-gray-200"
                 }`}
               />
             )}
-            
+
             <div className="flex items-start">
               <div className="mt-1 mr-3">{renderStatusIcon(step.status)}</div>
               <div className="flex-grow">
@@ -97,7 +93,7 @@ const TransactionStatus: React.FC<TransactionStatusProps> = ({
                   )}
                 </div>
                 <p className="text-sm text-gray-600 mt-1">{step.description}</p>
-                
+
                 {/* Transaction Hash Link */}
                 {step.txHash && step.chainId && (
                   <a

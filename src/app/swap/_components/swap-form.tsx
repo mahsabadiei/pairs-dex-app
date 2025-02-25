@@ -288,20 +288,54 @@ const SwapForm = () => {
         message: "Swap in progress...",
       });
 
-      // Execute with status updates
-      const result = await executeSwap(quote, walletClient, (status) => {
-        console.log("Swap status update:", status);
-        // Handle status updates here
-        if (status.status === "DONE") {
-          setTxStatus({
-            status: "success",
-            message: "Swap completed successfully",
-            txHash: status.txHash,
-          });
-          setSwapStatus(SwapStatus.COMPLETED);
+      // Execute with status updates directly using the RouteExtended type
+      // Pass the wallet client as the second parameter
+      const result = await executeSwap(quote, (updatedRoute) => {
+        console.log("Swap status update:", updatedRoute);
 
-          // Update balances after swap
-          updateBalances();
+        // Find the latest execution status from the steps
+        const executionSteps = updatedRoute.steps.filter(
+          (step) => step.execution
+        );
+
+        if (executionSteps.length > 0) {
+          // Get the latest execution
+          const latestStep = executionSteps[executionSteps.length - 1];
+          const execution = latestStep.execution;
+
+          if (execution) {
+            // Check if status is DONE
+            if (execution.status === "DONE") {
+              // Find the transaction hash from the process array if available
+              const processWithTxHash = execution.process
+                .filter((process) => process.txHash)
+                .pop();
+
+              setTxStatus({
+                status: "success",
+                message: "Swap completed successfully",
+                txHash: processWithTxHash?.txHash,
+              });
+
+              setSwapStatus(SwapStatus.COMPLETED);
+
+              // Update balances after swap
+              updateBalances();
+            } else if (execution.status === "FAILED") {
+              // Handle the failed status
+              const failedProcess = execution.process
+                .filter((process) => process.status === "FAILED")
+                .pop();
+
+              setTxStatus({
+                status: "failed",
+                message: failedProcess?.message || "Swap failed",
+                txHash: failedProcess?.txHash,
+              });
+
+              setSwapStatus(SwapStatus.FAILED);
+            }
+          }
         }
       });
 

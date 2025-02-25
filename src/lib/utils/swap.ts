@@ -6,13 +6,13 @@ import {
   getChains,
   getTokenBalance,
   setTokenAllowance,
-  StatusManager,
   getToken,
   getTokenBalances,
+  ExecutionOptions,
+  RouteExtended,
 } from "@lifi/sdk";
 import type { BaseToken, Token, UnavailableRoutes } from "@lifi/types";
 import { Client } from "viem";
-import { SDKError, SwapStatus } from "../types/lifi";
 
 export interface QuoteParams {
   fromChain: number;
@@ -73,23 +73,47 @@ export const fetchTokenBalance = async (
   token: Token
 ): Promise<string> => {
   try {
-    const balance = await getTokenBalance(walletAddress, token);
-    return balance;
+    const tokenAmount = await getTokenBalance(walletAddress, token);
+
+    // Handle the null case and return the amount as a string
+    if (!tokenAmount || tokenAmount.amount === undefined) {
+      return "0"; // Return "0" if the token amount is null or undefined
+    }
+
+    // Return the amount as a string
+    return tokenAmount.amount.toString();
   } catch (error) {
     console.error("Error fetching token balance:", error);
     throw error;
   }
 };
 
-// Fetch multiple token balances
+// Fetch multiple token balances and convert to Record<string, string>
 export const fetchMultipleTokenBalances = async (
   walletAddress: string,
   tokens: Token[]
 ): Promise<Record<string, string>> => {
   try {
-    // For multiple tokens, use getTokenBalances
-    const balances = await getTokenBalances(walletAddress, tokens);
-    return balances;
+    // Get token balances using getTokenBalances function
+    const tokenAmounts = await getTokenBalances(walletAddress, tokens);
+
+    // Convert array of TokenAmount objects to Record<string, string>
+    const balanceRecord: Record<string, string> = {};
+
+    // Process each token balance
+    tokenAmounts.forEach((tokenAmount) => {
+      if (
+        tokenAmount &&
+        tokenAmount.address &&
+        tokenAmount.amount !== undefined
+      ) {
+        // Use lowercase address as key for consistency
+        const tokenAddress = tokenAmount.address.toLowerCase();
+        balanceRecord[tokenAddress] = tokenAmount.amount.toString();
+      }
+    });
+
+    return balanceRecord;
   } catch (error) {
     console.error("Error fetching token balances:", error);
     throw error;
@@ -220,7 +244,6 @@ const handleNoRoutesError = (
   throw new Error("No available routes found for this swap");
 };
 
-// Handle general quote errors
 /**
  * Handle errors from getting quotes
  * Formats error messages to be more user-friendly
@@ -242,16 +265,16 @@ const handleQuoteError = (error: unknown): Error => {
 
     // Check for SDK-specific errors
     if ("code" in error && typeof error.code === "string") {
-      const sdkError = error as SDKError;
+      const sdkError = error;
 
       // Handle specific SDK error codes
       if (sdkError.code === "VALIDATION_ERROR") {
         return new Error("Invalid swap parameters. Please check your inputs.");
       }
 
-      if (sdkError.code === "REQUEST_FAILED" && sdkError.status === 429) {
-        return new Error("Too many requests. Please try again in a moment.");
-      }
+      // if (sdkError.code === "REQUEST_FAILED" && sdkError.status === 429) {
+      //   return new Error("Too many requests. Please try again in a moment.");
+      // }
     }
 
     return error;
@@ -270,32 +293,21 @@ const handleQuoteError = (error: unknown): Error => {
  * Execute a swap with status tracking
  *
  * @param route The route to execute
- * @param walletClient The wallet client to use for signing
  * @param onStatusUpdate Optional callback for status updates
  * @returns The result of the swap execution
  */
 export const executeSwap = async (
   route: Route,
-  walletClient: Client,
-  onStatusUpdate?: (status: SwapStatus) => void
+  onStatusUpdate?: (updatedRoute: RouteExtended) => void
 ) => {
   try {
-    // Create a status manager to track the swap status
-    const statusManager = new StatusManager();
+    // Configure execution options
+    const executionOptions: ExecutionOptions = {
+      updateRouteHook: onStatusUpdate,
+    };
 
-    // Register for status updates if callback provided
-    if (onStatusUpdate) {
-      statusManager.subscribe((status: SwapStatus) => {
-        onStatusUpdate(status);
-      });
-    }
-
-    // Execute the swap
-    const result = await executeRoute({
-      route,
-      walletClient,
-      statusManager,
-    });
+    // Execute the route
+    const result = await executeRoute(route, executionOptions);
 
     return result;
   } catch (error) {
