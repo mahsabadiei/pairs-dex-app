@@ -1,4 +1,3 @@
-// src/lib/lifi/config.ts
 import { EVM, createConfig } from "@lifi/sdk";
 import { getWalletClient, switchChain } from "@wagmi/core";
 import { wagmiConfig } from "@/app/providers";

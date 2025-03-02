@@ -6,6 +6,7 @@ import { ChevronDown, Search, X, Clock } from "lucide-react";
 import { getSupportedTokens } from "@/lib/services/lifi";
 import type { Token } from "@lifi/types";
 import TokenRow from "@/app/swap/_components/token-row";
+import { DEFAULT_CHAIN_LOGO } from "@/lib/utils/constants";
 
 // Native token address
 const NATIVE_TOKEN_ADDRESS = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE";
@@ -254,7 +255,7 @@ const TokenSelector = ({
             className="w-5 h-5 rounded-full object-contain"
             onError={(e) => {
               const imgElement = e.target as HTMLImageElement;
-              imgElement.src = "/images/quoteView.png";
+              imgElement.src = DEFAULT_CHAIN_LOGO;
             }}
           />
         ) : (

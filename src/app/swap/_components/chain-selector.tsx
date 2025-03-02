@@ -5,8 +5,8 @@ import { useChainId, useSwitchChain } from "wagmi";
 import { ChevronDown, Search, X } from "lucide-react";
 import { debounce } from "lodash";
 import { fetchChains } from "@/lib/services/lifi";
+import { DEFAULT_CHAIN_LOGO } from "@/lib/utils/constants";
 
-// Define an extended Chain interface that includes our additional properties
 interface ExtendedChain {
   id: number;
   name: string;
@@ -14,15 +14,13 @@ interface ExtendedChain {
   isSupported?: boolean;
 }
 
-// Default placeholder for chain logos
-const DEFAULT_CHAIN_LOGO = "/images/quoteView.png";
-
-interface ChainSelectorProps {
+const ChainSelector = ({
+  selectedChain,
+  onChange,
+}: {
   selectedChain: number;
   onChange: (chainId: number) => void;
-}
-
-const ChainSelector = ({ selectedChain, onChange }: ChainSelectorProps) => {
+}) => {
   const currentChainId = useChainId();
   const { switchChain } = useSwitchChain();
   const [isOpen, setIsOpen] = useState(false);
@@ -153,15 +151,19 @@ const ChainSelector = ({ selectedChain, onChange }: ChainSelectorProps) => {
         onClick={openModal}
         className="flex items-center gap-2 p-2 bg-neutral-cream rounded-lg hover:bg-white-ivory transition-colors"
       >
-        <img
-          src={getChainLogo(selectedChain)}
-          alt={selectedChainInfo?.name || "Chain"}
-          className="w-5 h-5 rounded-full object-contain"
-          onError={(e) => {
-            const imgElement = e.target as HTMLImageElement;
-            imgElement.src = DEFAULT_CHAIN_LOGO;
-          }}
-        />
+        {getChainLogo(selectedChain) ? (
+          <img
+            src={getChainLogo(selectedChain)}
+            alt={selectedChainInfo?.name || "Chain"}
+            className="w-5 h-5 rounded-full object-contain"
+            onError={(e) => {
+              const imgElement = e.target as HTMLImageElement;
+              imgElement.src = DEFAULT_CHAIN_LOGO;
+            }}
+          />
+        ) : (
+          <div className="w-5 h-5 rounded-full bg-gray-300" />
+        )}
         <span className="font-medium text-sm text-black-primary">
           {selectedChainInfo?.name || "Select Chain"}
         </span>
@@ -228,15 +230,20 @@ const ChainSelector = ({ selectedChain, onChange }: ChainSelectorProps) => {
                       }`}
                       disabled={chain.isSupported === false}
                     >
-                      <img
-                        src={getChainLogo(chain.id)}
-                        alt={chain.name}
-                        className="w-8 h-8 rounded-full object-contain"
-                        onError={(e) => {
-                          const imgElement = e.target as HTMLImageElement;
-                          imgElement.src = DEFAULT_CHAIN_LOGO;
-                        }}
-                      />
+                      {getChainLogo(chain.id) ? (
+                        <img
+                          src={getChainLogo(chain.id)}
+                          alt={chain.name}
+                          className="w-8 h-8 rounded-full object-contain"
+                          onError={(e) => {
+                            const imgElement = e.target as HTMLImageElement;
+                            imgElement.src = DEFAULT_CHAIN_LOGO;
+                          }}
+                        />
+                      ) : (
+                        <div className="w-5 h-5 rounded-full bg-gray-300" />
+                      )}
+
                       <div className="flex flex-col items-start">
                         <span className="font-medium text-black-primary">
                           {chain.name}

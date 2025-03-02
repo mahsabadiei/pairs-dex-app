@@ -1,3 +1,4 @@
+import { DEFAULT_CHAIN_LOGO } from "@/lib/utils/constants";
 import { Token } from "@lifi/sdk";
 
 const TokenRow = ({
@@ -24,7 +25,7 @@ const TokenRow = ({
             className="w-8 h-8 rounded-full object-contain"
             onError={(e) => {
               const imgElement = e.target as HTMLImageElement;
-              imgElement.src = "/images/quoteView.png";
+              imgElement.src = DEFAULT_CHAIN_LOGO;
             }}
           />
         ) : (
