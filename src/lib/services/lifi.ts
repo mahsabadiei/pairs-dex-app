@@ -216,7 +216,6 @@ export const getQuote = async (params: QuoteParams): Promise<Route> => {
  * @param onStatusUpdate Optional callback for status updates
  * @returns The result of the swap execution
  */
-// Execute a swap with status tracking
 export const executeSwap = async (
   route: Route,
   onStatusUpdate?: (updatedRoute: RouteExtended) => void
