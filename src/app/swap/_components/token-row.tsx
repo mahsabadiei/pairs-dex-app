@@ -22,15 +22,24 @@ const TokenRow = ({
             src={token.logoURI}
             alt={token.symbol}
             className="w-8 h-8 rounded-full object-contain"
+            onError={(e) => {
+              const imgElement = e.target as HTMLImageElement;
+              imgElement.src = "/images/quoteView.png";
+            }}
           />
         ) : (
-          <div className="w-8 h-8 rounded-full bg-gray-primary" />
+          <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center">
+            <span className="text-sm font-medium text-gray-600">
+              {token.symbol?.slice(0, 2)}
+            </span>
+          </div>
         )}
         <div className="flex flex-col items-start">
           <span className="font-medium text-black-primary">{token.symbol}</span>
           <span className="text-xs text-neutral-light">{token.name}</span>
         </div>
       </div>
+      {/* You can add token balances here if needed */}
     </button>
   );
 };

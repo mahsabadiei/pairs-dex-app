@@ -56,6 +56,7 @@ interface TransactionStatus {
   status: "pending" | "success" | "failed";
   message: string;
   txHash?: string;
+  explorerUrl?: string;
 }
 
 const SwapForm = () => {
@@ -114,12 +115,12 @@ const SwapForm = () => {
             toTokenObj,
           ]);
 
-          if (balances[fromToken]) {
-            setFromTokenBalance(balances[fromToken]);
+          if (balances[fromToken.toLowerCase()]) {
+            setFromTokenBalance(balances[fromToken.toLowerCase()]);
           }
 
-          if (balances[toToken]) {
-            setToTokenBalance(balances[toToken]);
+          if (balances[toToken.toLowerCase()]) {
+            setToTokenBalance(balances[toToken.toLowerCase()]);
           }
         } catch (batchError) {
           console.error("Error fetching multiple balances:", batchError);
@@ -288,8 +289,6 @@ const SwapForm = () => {
         message: "Swap in progress...",
       });
 
-      // Execute with status updates directly using the RouteExtended type
-      // Pass the wallet client as the second parameter
       const result = await executeSwap(quote, (updatedRoute) => {
         console.log("Swap status update:", updatedRoute);
 
@@ -311,10 +310,26 @@ const SwapForm = () => {
                 .filter((process) => process.txHash)
                 .pop();
 
+              // Get the explorer URL for the transaction
+              let explorerUrl = undefined;
+              if (processWithTxHash?.txHash) {
+                const chainId = latestStep.action.fromChainId;
+                if (chainId === 1) {
+                  explorerUrl = `https://etherscan.io/tx/${processWithTxHash.txHash}`;
+                } else if (chainId === 137) {
+                  explorerUrl = `https://polygonscan.com/tx/${processWithTxHash.txHash}`;
+                } else if (chainId === 42161) {
+                  explorerUrl = `https://arbiscan.io/tx/${processWithTxHash.txHash}`;
+                } else if (chainId === 10) {
+                  explorerUrl = `https://optimistic.etherscan.io/tx/${processWithTxHash.txHash}`;
+                }
+              }
+
               setTxStatus({
                 status: "success",
                 message: "Swap completed successfully",
                 txHash: processWithTxHash?.txHash,
+                explorerUrl,
               });
 
               setSwapStatus(SwapStatus.COMPLETED);
@@ -379,12 +394,12 @@ const SwapForm = () => {
           toTokenObj,
         ]);
 
-        if (balances[fromToken]) {
-          setFromTokenBalance(balances[fromToken]);
+        if (balances[fromToken.toLowerCase()]) {
+          setFromTokenBalance(balances[fromToken.toLowerCase()]);
         }
 
-        if (balances[toToken]) {
-          setToTokenBalance(balances[toToken]);
+        if (balances[toToken.toLowerCase()]) {
+          setToTokenBalance(balances[toToken.toLowerCase()]);
         }
       } catch (batchError) {
         console.error("Error fetching multiple balances:", batchError);
@@ -701,11 +716,11 @@ const SwapForm = () => {
             {txStatus.txHash && (
               <div className="mt-1 text-xs text-blue-500">
                 <a
-                  href={`https://etherscan.io/tx/${txStatus.txHash}`}
+                  href={txStatus.explorerUrl || `https://etherscan.io/tx/${txStatus.txHash}`}
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  View on Etherscan
+                  View on Explorer
                 </a>
               </div>
             )}

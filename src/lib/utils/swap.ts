@@ -1,3 +1,4 @@
+// src/lib/services/lifi.ts
 import {
   type Route,
   getRoutes,
@@ -13,6 +14,7 @@ import {
 } from "@lifi/sdk";
 import type { BaseToken, Token, UnavailableRoutes } from "@lifi/types";
 import { Client } from "viem";
+import { initializeLiFi } from "../services/lifi";
 
 export interface QuoteParams {
   fromChain: number;
@@ -25,8 +27,19 @@ export interface QuoteParams {
   allowSwitchChain?: boolean;
 }
 
+// Ensure LI.FI is initialized
+const ensureLiFiInitialized = () => {
+  try {
+    initializeLiFi();
+  } catch (error) {
+    console.error("Failed to initialize LI.FI:", error);
+  }
+};
+
 // Get all supported chains
 export const fetchChains = async () => {
+  ensureLiFiInitialized();
+
   try {
     const chains = await getChains();
     return chains;
@@ -38,8 +51,10 @@ export const fetchChains = async () => {
 
 // Get tokens for a specific chain
 export const getSupportedTokens = async (chainId: number): Promise<Token[]> => {
+  ensureLiFiInitialized();
+
   try {
-    const tokensResponse = await getTokens();
+    const tokensResponse = await getTokens({ chains: [chainId] });
     const tokensArray = tokensResponse.tokens[chainId];
 
     if (!tokensArray) {
@@ -58,6 +73,8 @@ export const fetchToken = async (
   chainId: number,
   tokenAddress: string
 ): Promise<Token> => {
+  ensureLiFiInitialized();
+
   try {
     const token = await getToken(chainId, tokenAddress);
     return token;
@@ -67,11 +84,13 @@ export const fetchToken = async (
   }
 };
 
-// Get token balance using the correct parameter order
+// Get token balance
 export const fetchTokenBalance = async (
   walletAddress: string,
   token: Token
 ): Promise<string> => {
+  ensureLiFiInitialized();
+
   try {
     const tokenAmount = await getTokenBalance(walletAddress, token);
 
@@ -93,6 +112,8 @@ export const fetchMultipleTokenBalances = async (
   walletAddress: string,
   tokens: Token[]
 ): Promise<Record<string, string>> => {
+  ensureLiFiInitialized();
+
   try {
     // Get token balances using getTokenBalances function
     const tokenAmounts = await getTokenBalances(walletAddress, tokens);
@@ -132,6 +153,8 @@ export const checkAndSetAllowance = async ({
   spenderAddress: string;
   amount: bigint;
 }): Promise<boolean> => {
+  ensureLiFiInitialized();
+
   try {
     // Only ERC20 tokens need allowance
     if (token.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE") {
@@ -158,6 +181,8 @@ export const checkAndSetAllowance = async ({
 
 // Get quote for a swap
 export const getQuote = async (params: QuoteParams): Promise<Route> => {
+  ensureLiFiInitialized();
+
   try {
     const routes = await getRoutes({
       fromChainId: params.fromChain,
@@ -183,6 +208,60 @@ export const getQuote = async (params: QuoteParams): Promise<Route> => {
     console.error("Error getting quote:", error);
     throw handleQuoteError(error);
   }
+};
+
+/**
+ * Execute a swap with status tracking
+ *
+ * @param route The route to execute
+ * @param onStatusUpdate Optional callback for status updates
+ * @returns The result of the swap execution
+ */
+// Execute a swap with status tracking
+export const executeSwap = async (
+  route: Route,
+  onStatusUpdate?: (updatedRoute: RouteExtended) => void
+) => {
+  ensureLiFiInitialized();
+
+  try {
+    // Configure execution options
+    const executionOptions: ExecutionOptions = {
+      updateRouteHook: onStatusUpdate,
+    };
+
+    // Execute the route
+    const result = await executeRoute(route, executionOptions);
+
+    return result;
+  } catch (error) {
+    console.error("Error executing swap:", error);
+    throw error;
+  }
+};
+
+// Format amount with proper decimals
+export const formatTokenAmount = (amount: string, decimals: number): string => {
+  const parsedAmount = parseFloat(amount) / 10 ** decimals;
+  return parsedAmount.toLocaleString(undefined, {
+    maximumFractionDigits: 6,
+    minimumFractionDigits: 0,
+  });
+};
+
+// Convert display amount to on-chain amount
+export const parseTokenAmount = (
+  displayAmount: string,
+  decimals: number
+): string => {
+  // Remove commas and other formatting
+  const cleanAmount = displayAmount.replace(/,/g, "");
+
+  // Calculate the on-chain amount
+  const factor = 10 ** decimals;
+  const onChainAmount = Math.floor(parseFloat(cleanAmount) * factor).toString();
+
+  return onChainAmount;
 };
 
 /**
@@ -265,16 +344,12 @@ const handleQuoteError = (error: unknown): Error => {
 
     // Check for SDK-specific errors
     if ("code" in error && typeof error.code === "string") {
-      const sdkError = error;
+      const sdkError = error as { code: string; status?: number };
 
       // Handle specific SDK error codes
       if (sdkError.code === "VALIDATION_ERROR") {
         return new Error("Invalid swap parameters. Please check your inputs.");
       }
-
-      // if (sdkError.code === "REQUEST_FAILED" && sdkError.status === 429) {
-      //   return new Error("Too many requests. Please try again in a moment.");
-      // }
     }
 
     return error;
@@ -282,60 +357,9 @@ const handleQuoteError = (error: unknown): Error => {
 
   // If it's an object with a message property
   if (typeof error === "object" && error !== null && "message" in error) {
-    return new Error(String(error.message));
+    return new Error(String((error as { message: unknown }).message));
   }
 
   // Default fallback
   return new Error("Unknown error occurred during swap");
-};
-
-/**
- * Execute a swap with status tracking
- *
- * @param route The route to execute
- * @param onStatusUpdate Optional callback for status updates
- * @returns The result of the swap execution
- */
-export const executeSwap = async (
-  route: Route,
-  onStatusUpdate?: (updatedRoute: RouteExtended) => void
-) => {
-  try {
-    // Configure execution options
-    const executionOptions: ExecutionOptions = {
-      updateRouteHook: onStatusUpdate,
-    };
-
-    // Execute the route
-    const result = await executeRoute(route, executionOptions);
-
-    return result;
-  } catch (error) {
-    console.error("Error executing swap:", error);
-    throw error;
-  }
-};
-
-// Format amount with proper decimals
-export const formatTokenAmount = (amount: string, decimals: number): string => {
-  const parsedAmount = parseFloat(amount) / 10 ** decimals;
-  return parsedAmount.toLocaleString(undefined, {
-    maximumFractionDigits: 6,
-    minimumFractionDigits: 0,
-  });
-};
-
-// Convert display amount to on-chain amount
-export const parseTokenAmount = (
-  displayAmount: string,
-  decimals: number
-): string => {
-  // Remove commas and other formatting
-  const cleanAmount = displayAmount.replace(/,/g, "");
-
-  // Calculate the on-chain amount
-  const factor = 10 ** decimals;
-  const onChainAmount = Math.floor(parseFloat(cleanAmount) * factor).toString();
-
-  return onChainAmount;
 };

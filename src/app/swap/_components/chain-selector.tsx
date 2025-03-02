@@ -2,29 +2,20 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useChainId, useSwitchChain } from "wagmi";
-import { config } from "@/app/providers";
 import { ChevronDown, Search, X } from "lucide-react";
 import { debounce } from "lodash";
-import { fetchChains } from "../../../lib/utils/swap";
-import { Chain } from "wagmi/chains";
+import { fetchChains } from "@/lib/utils/swap";
 
 // Define an extended Chain interface that includes our additional properties
-interface ExtendedChain extends Chain {
+interface ExtendedChain {
+  id: number;
+  name: string;
   logoURI?: string;
   isSupported?: boolean;
 }
 
-// Chain logos mapping
-const CHAIN_LOGOS: Record<number, string> = {
-  1: "/images/chains/ethereum.svg",
-  137: "/images/chains/polygon.svg",
-  42161: "/images/chains/arbitrum.svg",
-  10: "/images/chains/optimism.svg",
-  // Add more chains as needed
-};
-
 // Default placeholder for chain logos
-const DEFAULT_CHAIN_LOGO = "/images/chains/default.svg";
+const DEFAULT_CHAIN_LOGO = "/images/quoteView.png";
 
 interface ChainSelectorProps {
   selectedChain: number;
@@ -32,16 +23,12 @@ interface ChainSelectorProps {
 }
 
 const ChainSelector = ({ selectedChain, onChange }: ChainSelectorProps) => {
-  const { chains } = config;
   const currentChainId = useChainId();
   const { switchChain } = useSwitchChain();
   const [isOpen, setIsOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  // Create a new array instead of casting the readonly array
-  const [allChains, setAllChains] = useState<ExtendedChain[]>([
-    ...chains,
-  ] as ExtendedChain[]);
+  const [allChains, setAllChains] = useState<ExtendedChain[]>([]);
   const [loading, setLoading] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -53,26 +40,15 @@ const ChainSelector = ({ selectedChain, onChange }: ChainSelectorProps) => {
         setLoading(true);
         const chainsFromLifi = await fetchChains();
 
-        // Create a new array from the readonly chains
-        const combinedChains: ExtendedChain[] = [...chains].map((chain) => {
-          const lifiChain = chainsFromLifi.find((c) => c.id === chain.id);
+        // Map chains to our ExtendedChain format
+        const formattedChains: ExtendedChain[] = chainsFromLifi.map((chain) => ({
+          id: chain.id,
+          name: chain.name,
+          logoURI: chain.logoURI,
+          isSupported: true,
+        }));
 
-          // Create a properly typed extended chain object
-          const extendedChain: ExtendedChain = {
-            ...chain,
-            logoURI: lifiChain?.logoURI,
-            isSupported: !!lifiChain,
-          };
-
-          // If LI.FI has a name for this chain, use it
-          if (lifiChain?.name) {
-            extendedChain.name = lifiChain.name;
-          }
-
-          return extendedChain;
-        });
-
-        setAllChains(combinedChains);
+        setAllChains(formattedChains);
       } catch (error) {
         console.error("Error fetching chains:", error);
       } finally {
@@ -81,7 +57,7 @@ const ChainSelector = ({ selectedChain, onChange }: ChainSelectorProps) => {
     };
 
     getAllChains();
-  }, [chains]);
+  }, []);
 
   const filteredChains = useMemo(() => {
     if (!searchQuery) return allChains;
@@ -165,8 +141,8 @@ const ChainSelector = ({ selectedChain, onChange }: ChainSelectorProps) => {
       return chainInfo.logoURI;
     }
 
-    // Fall back to predefined logos
-    return CHAIN_LOGOS[chainId] || DEFAULT_CHAIN_LOGO;
+    // Fall back to default
+    return DEFAULT_CHAIN_LOGO;
   };
 
   return (
@@ -193,7 +169,7 @@ const ChainSelector = ({ selectedChain, onChange }: ChainSelectorProps) => {
       {isOpen && (
         <div
           className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black-primary/80 backdrop-blur-sm ${
-            isClosing ? "animate-fade-in" : "animate-fade-in"
+            isClosing ? "animate-fade-out" : "animate-fade-in"
           }`}
           style={{ animationDirection: isClosing ? "reverse" : "normal" }}
         >

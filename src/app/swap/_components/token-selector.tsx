@@ -34,6 +34,18 @@ const COMMON_TOKENS: Record<number, string[]> = {
     "0xc2132D05D31c914a87C6611C10748AEb04B58e8F", // USDT
     "0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063", // DAI
   ],
+  42161: [
+    NATIVE_TOKEN_ADDRESS,
+    "0xaf88d065e77c8cC2239327C5EDb3A432268e5831", // USDC
+    "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9", // USDT
+    "0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1", // DAI
+  ],
+  10: [
+    NATIVE_TOKEN_ADDRESS,
+    "0x7F5c764cBc14f9669B88837ca1490cCa17c31607", // USDC
+    "0x94b008aA00579c1307B0EF2c499aD98a8ce58e58", // USDT
+    "0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1", // DAI
+  ],
   // Add more chains as needed
 };
 
@@ -76,7 +88,7 @@ const TokenSelector = ({
           priceUSD: "0",
           logoURI: `/images/tokens/${NATIVE_TOKEN_SYMBOLS[
             chainId
-          ].toLowerCase()}.svg`,
+          ]?.toLowerCase() || "eth"}.svg`,
         };
 
         // Get all tokens for this chain
@@ -229,25 +241,6 @@ const TokenSelector = ({
     }
   };
 
-  // // Get token balance (for display)
-  // const getTokenBalance = async (token: Token) => {
-  //   if (!address) return null;
-
-  //   try {
-  //     // The correct parameter order is (walletAddress, token)
-  //     const balance = await fetchTokenBalance(address, token);
-
-  //     const displayBalance = parseFloat(balance) / 10 ** token.decimals;
-  //     return displayBalance.toLocaleString(undefined, {
-  //       maximumFractionDigits: 4,
-  //       minimumFractionDigits: 0,
-  //     });
-  //   } catch (err) {
-  //     console.error(`Error fetching balance for ${token.symbol}:`, err);
-  //     return null;
-  //   }
-  // };
-
   return (
     <div className="relative">
       <button
@@ -259,9 +252,13 @@ const TokenSelector = ({
             src={selectedTokenInfo.logoURI}
             alt={selectedTokenInfo.symbol}
             className="w-5 h-5 rounded-full object-contain"
+            onError={(e) => {
+              const imgElement = e.target as HTMLImageElement;
+              imgElement.src = "/images/quoteView.png";
+            }}
           />
         ) : (
-          <div className="w-5 h-5 rounded-full bg-gray-primary" />
+          <div className="w-5 h-5 rounded-full bg-gray-300" />
         )}
         <span className="font-medium text-sm text-black-primary">
           {selectedTokenInfo?.symbol || "Select Token"}
@@ -272,7 +269,7 @@ const TokenSelector = ({
       {isOpen && (
         <div
           className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black-primary/80 backdrop-blur-sm ${
-            isClosing ? "animate-fade-in" : "animate-fade-in"
+            isClosing ? "animate-fade-out" : "animate-fade-in"
           }`}
           style={{ animationDirection: isClosing ? "reverse" : "normal" }}
         >
