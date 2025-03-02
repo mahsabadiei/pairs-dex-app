@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Toaster } from "react-hot-toast";
 import { geistMono, geistSans } from "@/styles/fonts";
 import { Providers } from "./providers";
 import "../styles/globals.css";
@@ -19,7 +20,9 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <Providers>{children}</Providers>
+        <Providers>
+          {children} <Toaster position="bottom-right" />
+        </Providers>
       </body>
     </html>
   );
