@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { debounce } from "lodash";
 import { ChevronDown, Search, X, Clock } from "lucide-react";
-import { getSupportedTokens } from "@/lib/utils/swap";
+import { getSupportedTokens } from "@/lib/services/lifi";
 import type { Token } from "@lifi/types";
 import TokenRow from "@/app/swap/_components/token-row";
 
@@ -86,9 +86,9 @@ const TokenSelector = ({
           name: NATIVE_TOKEN_SYMBOLS[chainId] === "ETH" ? "Ethereum" : "Matic",
           chainId,
           priceUSD: "0",
-          logoURI: `/images/tokens/${NATIVE_TOKEN_SYMBOLS[
-            chainId
-          ]?.toLowerCase() || "eth"}.svg`,
+          logoURI: `/images/tokens/${
+            NATIVE_TOKEN_SYMBOLS[chainId]?.toLowerCase() || "eth"
+          }.svg`,
         };
 
         // Get all tokens for this chain

@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useChainId, useSwitchChain } from "wagmi";
 import { ChevronDown, Search, X } from "lucide-react";
 import { debounce } from "lodash";
-import { fetchChains } from "@/lib/utils/swap";
+import { fetchChains } from "@/lib/services/lifi";
 
 // Define an extended Chain interface that includes our additional properties
 interface ExtendedChain {
@@ -41,12 +41,14 @@ const ChainSelector = ({ selectedChain, onChange }: ChainSelectorProps) => {
         const chainsFromLifi = await fetchChains();
 
         // Map chains to our ExtendedChain format
-        const formattedChains: ExtendedChain[] = chainsFromLifi.map((chain) => ({
-          id: chain.id,
-          name: chain.name,
-          logoURI: chain.logoURI,
-          isSupported: true,
-        }));
+        const formattedChains: ExtendedChain[] = chainsFromLifi.map(
+          (chain) => ({
+            id: chain.id,
+            name: chain.name,
+            logoURI: chain.logoURI,
+            isSupported: true,
+          })
+        );
 
         setAllChains(formattedChains);
       } catch (error) {

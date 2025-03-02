@@ -15,7 +15,7 @@ import {
   formatTokenAmount,
   fetchToken,
   fetchMultipleTokenBalances,
-} from "@/lib/utils/swap";
+} from "@/lib/services/lifi";
 import ChainSelector from "./chain-selector";
 import TokenSelector from "./token-selector";
 import type { Token } from "@lifi/types";
@@ -716,7 +716,10 @@ const SwapForm = () => {
             {txStatus.txHash && (
               <div className="mt-1 text-xs text-blue-500">
                 <a
-                  href={txStatus.explorerUrl || `https://etherscan.io/tx/${txStatus.txHash}`}
+                  href={
+                    txStatus.explorerUrl ||
+                    `https://etherscan.io/tx/${txStatus.txHash}`
+                  }
                   target="_blank"
                   rel="noopener noreferrer"
                 >
