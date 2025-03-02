@@ -493,9 +493,9 @@ const SwapForm = () => {
 
   return (
     <div className="w-[600px] max-w-md p-6 rounded-2xl border-2 border-white bg-neutral-cream shadow-lg">
-      <div className="flex justify-between items-center mb-6">
-        <ConnectButton />
-      </div>
+     <div className="flex justify-between items-center mb-6 min-h-[40px]">
+  <ConnectButton />
+</div>
 
       <div className="space-y-6">
         {/* From section */}
